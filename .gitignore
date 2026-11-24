@@ -1,0 +1,6 @@
+# Configuration locale (ports, mots de passe) : ne pas versionner
+.env
+
+# Divers
+*.log
+.DS_Store
