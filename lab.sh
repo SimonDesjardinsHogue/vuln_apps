@@ -103,7 +103,7 @@ compose() { "${COMPOSE_CMD[@]}" --file "$COMPOSE_FILE" "$@"; }
 
 require_docker() {
   command -v docker >/dev/null 2>&1 \
-    || die "Docker introuvable. Diagnostic: ./lab.sh doctor  (installation: sudo apt install docker.io docker-compose-v2)"
+    || die "Docker introuvable. Diagnostic: ./lab.sh doctor  (installation: sudo apt install docker.io docker-cli docker-compose)"
   docker info >/dev/null 2>&1 \
     || die "Demon Docker injoignable. Essayez: sudo systemctl start docker"
   detect_compose \
@@ -150,7 +150,7 @@ cmd_doctor() {
   if command -v docker >/dev/null 2>&1; then
     ok "Docker present : $(docker --version 2>/dev/null | head -1)"
   else
-    err "Docker absent  -> sudo apt install docker.io docker-compose-v2"; fail=1
+    err "Docker absent  -> sudo apt install docker.io docker-cli docker-compose"; fail=1
   fi
 
   if command -v docker >/dev/null 2>&1; then
@@ -167,9 +167,9 @@ cmd_doctor() {
   fi
 
   if detect_compose; then
-    ok "Docker Compose present (${COMPOSE_CMD[*]})"
+    ok "Docker Compose present : $("${COMPOSE_CMD[@]}" version 2>/dev/null | head -1) [${COMPOSE_CMD[*]}]"
   else
-    err "Docker Compose absent"; fail=1
+    err "Docker Compose absent -> sudo apt install docker-compose"; fail=1
   fi
 
   free_kb=$(df -Pk "$SCRIPT_DIR" | awk 'NR==2 {print $4}')
