@@ -1,0 +1,78 @@
+# =============================================================================
+# Laboratoire local d'applications volontairement vulnerables.
+# -----------------------------------------------------------------------------
+# Principes de securite appliques :
+#   - ports publies sur 127.0.0.1 UNIQUEMENT (jamais 0.0.0.0) ;
+#   - un reseau Docker isole par application ;
+#   - base MariaDB (DVWA) sans aucun port publie ;
+#   - aucun conteneur privilegie, aucun montage du socket Docker ni du HOME ;
+#   - aucun redemarrage automatique (restart: "no") ;
+#   - une application ne demarre que si son profil est active (./lab.sh up <app>).
+# =============================================================================
+name: vuln-apps
+
+networks:
+  juice:
+  dvwa:
+  webgoat:
+
+volumes:
+  dvwa-db:
+
+services:
+
+  # --- OWASP Juice Shop ------------------------------------------------------
+  juice-shop:
+    image: bkimminich/juice-shop:${JUICE_SHOP_TAG:-latest}
+    container_name: vuln-apps-juice-shop
+    profiles: ["juice-shop"]
+    ports:
+      - "127.0.0.1:${JUICE_SHOP_PORT:-3000}:3000"
+    networks: [juice]
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+
+  # --- DVWA (application PHP) ------------------------------------------------
+  dvwa:
+    image: ghcr.io/digininja/dvwa:${DVWA_TAG:-latest}
+    container_name: vuln-apps-dvwa
+    profiles: ["dvwa"]
+    environment:
+      DB_SERVER: dvwa-db
+    depends_on:
+      - dvwa-db
+    ports:
+      - "127.0.0.1:${DVWA_PORT:-4280}:80"
+    networks: [dvwa]
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+
+  # --- DVWA : base de donnees (non publiee) ----------------------------------
+  dvwa-db:
+    image: mariadb:${DVWA_DB_TAG:-10}
+    container_name: vuln-apps-dvwa-db
+    profiles: ["dvwa"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DVWA_DB_ROOT_PASSWORD:-dvwa}
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: ${DVWA_DB_PASSWORD:-p@ssw0rd}
+    volumes:
+      - dvwa-db:/var/lib/mysql
+    networks: [dvwa]
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
+
+  # --- OWASP WebGoat (+ WebWolf) --------------------------------------------
+  webgoat:
+    image: webgoat/webgoat:${WEBGOAT_TAG:-latest}
+    container_name: vuln-apps-webgoat
+    profiles: ["webgoat"]
+    environment:
+      TZ: ${TZ:-Europe/Paris}
+    ports:
+      - "127.0.0.1:${WEBGOAT_PORT:-8080}:8080"
+      - "127.0.0.1:${WEBWOLF_PORT:-9090}:9090"
+    networks: [webgoat]
+    restart: "no"
+    security_opt: ["no-new-privileges:true"]
