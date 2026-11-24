@@ -25,13 +25,34 @@ Machines virtuelles (Metasploitable 2, VulnHub) : voir
 - Docker + Compose v2
 - ~5 GiB d'espace disque, ~2 GiB de RAM
 
-Installation (Kali) :
+Installation (Kali / Debian) :
+
+Sur Kali et Debian, Docker est reparti en **plusieurs paquets** et il **n'existe
+pas** de paquet `docker-compose-v2` :
+
+| Paquet | Role |
+|---|---|
+| `docker.io` | le **demon** (`dockerd`, `docker.service`) - ne fournit pas le client |
+| `docker-cli` | le **client** `docker` |
+| `docker-compose` | **Compose v2** (fournit `docker compose` et `docker-compose`) |
 
 ```bash
 sudo apt update
-sudo apt install -y docker.io docker-compose-v2
+sudo apt install -y docker.io docker-cli docker-compose
 sudo systemctl enable --now docker
-sudo usermod -aG docker "$USER"   # puis se reconnecter
+sudo usermod -aG docker "$USER"   # puis se reconnecter, ou : newgrp docker
+```
+
+`containerd`, `runc` et `iptables` sont installes automatiquement comme
+dependances. **N'installez pas `podman-docker`** : il entre en conflit avec
+`docker.io` / `docker-cli`.
+
+Verification :
+
+```bash
+docker --version          # 28.x
+docker compose version    # v2.x
+docker info               # le demon doit repondre
 ```
 
 ## Demarrage rapide
@@ -89,6 +110,19 @@ Details : [`docs/securite.md`](docs/securite.md). En resume :
 
 Verifie la syntaxe, l'aide, la liste, les erreurs d'usage et (si disponible) la
 validite de la configuration Compose.
+
+## Depannage
+
+| Symptome | Cause / Solution |
+|---|---|
+| `Unable to locate package docker-compose-v2` | Ce paquet n'existe pas sur Kali/Debian. Installer **`docker-compose`** (Compose v2). |
+| `Unit docker.service does not exist` | Le demon n'est pas installe : `sudo apt install docker.io`. |
+| `group 'docker' does not exist` | Demon non installe, ou session non rechargee : `newgrp docker` ou reconnexion. |
+| `permission denied ... docker.sock` | Utilisateur hors du groupe `docker` : `sudo usermod -aG docker "$USER"` puis reconnexion. |
+| `docker: command not found` apres `docker.io` | Le client est dans le paquet separe **`docker-cli`**. |
+| Conflit `podman-docker` / `docker.io` | Ne pas installer les deux (ils sont en conflit). |
+
+Diagnostic automatique : `./lab.sh doctor`.
 
 ## Licence
 
